@@ -1,0 +1,3 @@
+[submodule "keras-onnx-tensorflow-converter"]
+	path = keras-onnx-tensorflow-converter
+	url = https://github.com/palonso/keras-onnx-tensorflow-converter/

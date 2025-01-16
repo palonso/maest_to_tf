@@ -1,0 +1,10 @@
+optimum~=1.23
+onnx2tf~=1.26
+transformers~=4.48
+essentia-tensorflow
+onnx~=1.17
+onnx-runtime~=1.16
+accelerate~=1.2
+numpy~=1.26
+tensorflow~=2.18
+tf_keras~=2.18

@@ -64,30 +64,39 @@ do
         # apply left zero-pad so that layer has always 2 digits:
         n_layer=$(printf "%02d\n" $layer)
         python ${dir}add_output_node.py \
-            models_out/${model}.multi_out.onnx \
-            models_out/${model}.multi_out.onnx \
+            models_out/${model}.tmp.onnx \
+            models_out/${model}.tmp.onnx \
             /audio_spectrogram_transformer/encoder/layer.${layer}/output/Add \
             layer_${n_layer}_embeddings \
             --output-shape "batch_size" "n" ${embeddings}
     done
 
-    onnxsim models_out/${model}.multi_out.onnx models_out/${model}.multi_out.onnx 
+
+    echo "Adding sigmoid node"
+    # Add a Sigmoid output node since it was not included in the Pytorch model.
+    python ${dir}add_output_node.py \
+        models_out/${model}.tmp.onnx \
+        models_out/${model}.tmp.onnx \
+	/classifier/dense/Gemm \
+        activations \
+        --node-type Sigmoid \
+        --output-shape "batch_size" ${classes} \
 
 
-    # onnx2tf \
-    #     -i models_out/${model}.tmp.onnx \
-    #     -ois ${name_in}:1,${timestamps_in},${melspectrogram_bands} \
-    #     -kat ${name_in} \
-    #     -cotof \
-    #     -coion \
-    #     -otfv1pb
+    onnx2tf \
+        -i models_out/${model}.tmp.onnx \
+        -ois ${name_in}:1,${timestamps_in},${melspectrogram_bands} \
+        -kat ${name_in} \
+        -cotof \
+        -coion \
+        -otfv1pb
 
         # --param_replacement_file param_replacement_file.json \
         # --not_use_onnxsim \
 
-    # cp saved_model/${model}.tmp_float32.pb models_out/${model}.pb
+    cp saved_model/${model}.tmp_float32.pb models_out/${model}.pb
 
-    # mv models_out/${model}.tmp.onnx models_out/${model}.onnx
+    mv models_out/${model}.tmp.onnx models_out/${model}.onnx
 
     echo "Done with ${model}"
 done

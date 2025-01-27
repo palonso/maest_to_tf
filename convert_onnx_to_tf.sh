@@ -68,7 +68,7 @@ do
             models_out/${model}.multi_out.onnx \
             /audio_spectrogram_transformer/encoder/layer.${layer}/output/Add \
             layer_${n_layer}_embeddings \
-            --output-shape "batch_size","n",${embeddings}
+            --output-shape "batch_size" "n" ${embeddings}
     done
 
     onnxsim models_out/${model}.multi_out.onnx models_out/${model}.multi_out.onnx 

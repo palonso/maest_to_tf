@@ -36,22 +36,20 @@ for model_stem in [
     data = np.random.rand(1, 1, data_len, 96).astype("float32")
 
 
-
     model_ort = f"models_out/{model_stem}.onnx"
     session = ort.InferenceSession(model_ort)
 
-    # Prepare input
+    # Prepare inputs and outputs
     inputs = {"melspectrogram": data.squeeze(1)}
-
-    # Run inference
     output_names = [f"layer_{i:02d}_embeddings" for i in range(0, 12)]
+    output_names.append("logits")
 
     st = time()
-    outputs_onnx = session.run(output_names, inputs)
+    outputs = session.run(output_names, inputs)
     eta = time() - st
     print(f"ONNX realtime ETA: {eta:.2f}")
-    outputs_onnx = np.stack([h for h in outputs_onnx]).squeeze()
-    print(f"ONNX output shape: {outputs_onnx.shape}")
+    outputs_onnx = np.stack([h for h in outputs[:-1]]).squeeze()
+    logits_onnx = outputs[-1].squeeze()
 
     model_tf = f"models_in/{model_stem}/"
 
@@ -67,18 +65,17 @@ for model_stem in [
     eta = time() - st
     print(f"Transformers ETA: {eta:.2f}")
 
-    # outputs = out_trans.logits.detach().numpy().squeeze()
 
     outputs_tf = np.stack([h.detach().numpy().squeeze() for h in out_trans.hidden_states])
+    logits_tf = out_trans.logits.detach().numpy().squeeze()
     print(f"Transformers output shapes: {outputs_tf.shape}")
-    # np.save("logits_trans", outputs)
 
-
-    # Model defs
+    # Essentia infer
     inputs = ["melspectrogram"]
 
     # compare intermediate states
     outputs = [f"PartitionedCall/Identity_{i}" for i in range(1, 13)]
+    outputs.append("PartitionedCall/Identity")
 
     model_es = f"models_out/{model_stem}.pb"
     model = TensorflowPredict(graphFilename=model_es, inputs=inputs, outputs=outputs)
@@ -93,8 +90,16 @@ for model_stem in [
     eta = time() - st
     print(f"Essentia ETA: {eta:.2f}")
 
-    outputs_es = np.stack([pool_out[o] for o in outputs]).squeeze()
+    outputs_es = np.stack([pool_out[o] for o in outputs[:-1]]).squeeze()
+    logits_es = pool_out[outputs[-1]].squeeze()
     print(f"Essentia output shapes: {outputs_es.shape}")
+
+    print(f"Comparing logits")
+    np.testing.assert_allclose(logits_es, logits_tf, rtol=1e-03, atol=1e-03)
+    print("Essentia OK!")
+
+    np.testing.assert_allclose(logits_onnx, logits_tf, rtol=1e-03, atol=1e-03)
+    print("ONNX OK!")
 
     for layer in range(12):
         print(f"Processing layer {layer}")

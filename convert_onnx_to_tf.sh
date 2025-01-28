@@ -58,7 +58,6 @@ do
     echo "This models produces" ${timestamps_in} "timestamps" 
 
     echo "Adding output nodes"
-    cp models_out/${model}.tmp.onnx models_out/${model}.multi_out.onnx
     for layer in {0..11}
     do
         # apply left zero-pad so that layer has always 2 digits:
